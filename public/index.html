@@ -1470,10 +1470,7 @@
   <div class="chapter-label">Dal pubblico</div>
   <h2 class="section-title">Le vostre <span class="gradient-text">domande</span></h2>
 
-  <div class="qa-block">
-    <div class="qa-q">Le domande dal pubblico appariranno qui in tempo reale.</div>
-    <div class="qa-a">Ogni domanda riceverà una risposta durante il workshop.</div>
-  </div>
+  <div id="qa-container"></div>
 </div>
 
 <!-- ===== CHAPTER 03: SISTEMI ===== -->
@@ -1714,7 +1711,6 @@
   }
 
   // === BLOCK VISIBILITY ===
-  // Mappa dei divider: ogni blocco ha un divider prima di sé
   function updateBlockVisibility(blocks) {
     let newBlocks = [];
 
@@ -1726,38 +1722,60 @@
       const currentlyVisible = el.dataset.visible === 'true';
 
       if (shouldShow && !currentlyVisible) {
-        // Nuovo blocco! Mostralo con animazione
         el.dataset.visible = 'true';
         el.classList.add('block-reveal');
 
-        // Mostra anche il divider precedente
         const prev = el.previousElementSibling;
         if (prev && prev.classList.contains('section-divider')) {
           prev.style.display = '';
         }
 
-        // Osserva per scroll-reveal
         observer.observe(el);
-
         newBlocks.push(slug);
       } else if (!shouldShow && currentlyVisible && slug !== 'cover') {
-        // Nascondi (raro, ma supportato)
         el.dataset.visible = 'false';
         el.classList.remove('block-reveal', 'visible');
       }
     });
 
     if (newBlocks.length > 0) {
-      // Toast notification
       showToast();
-
-      // Scroll dolce al primo nuovo blocco dopo un breve delay
       setTimeout(() => {
         const firstNew = document.querySelector(`.block[data-block="${newBlocks[0]}"]`);
         if (firstNew) {
           firstNew.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 600);
+    }
+  }
+
+  // === Q&A DINAMICHE ===
+  let lastQACount = 0;
+
+  function updateQA(qaItems) {
+    const container = document.getElementById('qa-container');
+    if (!container || !qaItems || qaItems.length === 0) return;
+
+    const isNew = qaItems.length > lastQACount;
+    lastQACount = qaItems.length;
+
+    container.innerHTML = qaItems.map((item, i) => `
+      <div class="qa-block${isNew && i === qaItems.length - 1 ? ' block-reveal' : ''}">
+        <div class="qa-q">${item.autore ? '<strong>' + item.autore + ':</strong> ' : ''}${item.q}</div>
+        <div class="qa-a">${item.a}</div>
+      </div>
+    `).join('');
+
+    // Se ci sono Q&A nuove e il blocco qa è visibile, scrolla
+    if (isNew) {
+      const qaBlock = document.querySelector('.block[data-block="qa"]');
+      if (qaBlock && qaBlock.dataset.visible === 'true') {
+        showToast('Nuova domanda dal pubblico ↓');
+        setTimeout(() => {
+          const lastItem = container.lastElementChild;
+          if (lastItem) lastItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 600);
+      }
     }
   }
 
@@ -1772,6 +1790,9 @@
       const data = await res.json();
       if (data.blocks) {
         updateBlockVisibility(data.blocks);
+      }
+      if (data.qa) {
+        updateQA(data.qa);
       }
       pollErrors = 0;
     } catch (e) {

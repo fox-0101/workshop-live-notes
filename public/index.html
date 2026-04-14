@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Notes — Diventa Incredibile!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* === LIVE BLOCK VISIBILITY === */
+  .block[data-visible="false"] {
+    display: none !important;
+  }
+  .block[data-visible="false"] + .section-divider,
+  .section-divider + .block[data-visible="false"] {
+    display: none !important;
+  }
+  /* Divider prima di un blocco nascosto */
+  .section-divider:has(+ .block[data-visible="false"]) {
+    display: none !important;
+  }
+
+  /* Animazione di comparsa blocco */
+  .block.block-reveal {
+    animation: blockReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes blockReveal {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Notifica nuovo capitolo */
+  .new-chapter-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 1000;
+    pointer-events: none;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+  }
+  .new-chapter-toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  :root {
+    --bg: #09090b;
+    --bg-card: #18181b;
+    --bg-card-hover: #1f1f23;
+    --border: #27272a;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+    --accent-1: #818cf8; /* indigo */
+    --accent-2: #c084fc; /* purple */
+    --accent-3: #22d3ee; /* cyan */
+    --accent-4: #f59e0b; /* amber */
+    --gradient-1: linear-gradient(135deg, #818cf8, #c084fc);
+    --gradient-2: linear-gradient(135deg, #22d3ee, #818cf8);
+    --gradient-3: linear-gradient(135deg, #f59e0b, #f97316);
+    --glow-1: 0 0 80px rgba(129,140,248,0.15);
+    --glow-2: 0 0 80px rgba(34,211,238,0.1);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== COVER ===== */
+  .cover {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(129,140,248,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(192,132,252,0.06) 0%, transparent 50%);
+    animation: drift 20s ease-in-out infinite;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(2%, -1%) rotate(1deg); }
+    66% { transform: translate(-1%, 1%) rotate(-0.5deg); }
+  }
+
+  .cover-content { position: relative; z-index: 1; }
+
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+  }
+
+  .cover-title {
+    font-size: clamp(3rem, 10vw, 7rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.5rem;
+  }
+
+  .cover-sub {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+  }
+
+  .cover-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 1rem;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .scroll-hint svg { opacity: 0.4; }
+
+  @keyframes float {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 6rem 1.5rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-divider {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .chapter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-1);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+
+  .gradient-text {
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-2 {
+    background: var(--gradient-2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-3 {
+    background: var(--gradient-3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-intro {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin-bottom: 3rem;
+  }
+
+  /* ===== LEVEL CARDS (expandable) ===== */
+  .level-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 2.5rem;
+  }
+
+  .level-card {
+    background: var(--bg-card);
+    transition: background 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .level-card:hover { background: var(--bg-card-hover); }
+
+  .level-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.5rem 2rem;
+  }
+
+  .level-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+
+  .level-card-icon.lv-chat { background: rgba(161,161,170,0.12); }
+  .level-card-icon.lv-cowork { background: rgba(34,211,238,0.12); }
+  .level-card-icon.lv-agenti { background: rgba(129,140,248,0.12); }
+  .level-card-icon.lv-auto { background: rgba(245,158,11,0.12); }
+
+  .level-card-info { flex: 1; }
+
+  .level-card-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .level-card-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .level-card-hook {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .level-card-toggle {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+  }
+
+  .level-card.open .level-card-toggle {
+    transform: rotate(180deg);
+  }
+
+  .level-card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .level-card.open .level-card-body {
+    max-height: 500px;
+  }
+
+  .level-card-content {
+    padding: 0 2rem 2rem 5.2rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .level-card-content strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .level-card-content .key-concept {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 100px;
+    margin-top: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .key-concept.kc-chat { background: rgba(161,161,170,0.12); color: var(--text-muted); }
+  .key-concept.kc-cowork { background: rgba(34,211,238,0.12); color: var(--accent-3); }
+  .key-concept.kc-agenti { background: rgba(129,140,248,0.12); color: var(--accent-1); }
+  .key-concept.kc-auto { background: rgba(245,158,11,0.12); color: var(--accent-4); }
+
+  @media (max-width: 640px) {
+    .level-card-header { padding: 1.2rem 1.25rem; gap: 1rem; }
+    .level-card-content { padding: 0 1.25rem 1.5rem 1.25rem; }
+    .level-card-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+  }
+
+  /* ===== AGENT OS ===== */
+  .agentos-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .agentos-header {
+    padding: 2rem 2rem 1.5rem;
+  }
+
+  .agentos-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    margin-bottom: 0.5rem;
+  }
+
+  .agentos-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .agentos-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* Architecture schema */
+  .aos-architecture {
+    padding: 0 2rem 1.5rem;
+  }
+
+  .aos-cycle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .aos-cycle-step {
+    text-align: center;
+    padding: 0.8rem 1.2rem;
+    position: relative;
+  }
+
+  .aos-cycle-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+
+  .aos-cycle-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .aos-cycle-name.c-invoke { color: var(--accent-2); }
+  .aos-cycle-name.c-chat { color: var(--accent-3); }
+  .aos-cycle-name.c-write { color: var(--accent-1); }
+  .aos-cycle-name.c-evolve { color: var(--accent-4); }
+
+  .aos-cycle-desc {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.2rem;
+  }
+
+  .aos-arrow {
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    opacity: 0.3;
+    padding: 0 0.3rem;
+  }
+
+  /* Agent anatomy */
+  .aos-anatomy {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .aos-layer {
+    background: var(--bg);
+    padding: 1.2rem 1.5rem;
+    position: relative;
+  }
+
+  .aos-layer-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+
+  .aos-layer-bar.bar-purple { background: var(--accent-2); }
+  .aos-layer-bar.bar-cyan { background: var(--accent-3); }
+  .aos-layer-bar.bar-indigo { background: var(--accent-1); }
+  .aos-layer-bar.bar-amber { background: var(--accent-4); }
+
+  .aos-layer-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .aos-layer-detail {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .aos-anatomy-label {
+    text-align: center;
+    padding: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Agents image & chips */
+  .agentos-img {
+    width: 100%;
+    display: block;
+  }
+
+  .agentos-footer {
+    padding: 1.2rem 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .agent-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 4px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.05em;
+    background: rgba(192,132,252,0.1);
+    color: var(--accent-2);
+    border: 1px solid rgba(192,132,252,0.2);
+  }
+
+  @media (max-width: 640px) {
+    .aos-cycle { gap: 0; }
+    .aos-cycle-step { padding: 0.5rem 0.6rem; }
+    .aos-arrow { font-size: 0.9rem; padding: 0 0.1rem; }
+    .aos-anatomy { grid-template-columns: 1fr; }
+    .agentos-header { padding: 1.5rem 1.25rem 1rem; }
+    .aos-architecture { padding: 0 1.25rem 1.5rem; }
+    .agentos-footer { padding: 1rem 1.25rem; }
+  }
+
+  /* ===== QUOTE ===== */
+  .quote-block {
+    border-left: 2px solid var(--accent-1);
+    padding: 1.5rem 0 1.5rem 2rem;
+    margin: 3rem 0;
+  }
+
+  .quote-text {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .quote-attr {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ===== BIG NUMBER ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    padding: 2.5rem 2rem;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ===== PIPELINE ===== */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 2.5rem 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .pipeline-step {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.3s ease;
+  }
+
+  .pipeline-step:last-child { border-bottom: none; }
+  .pipeline-step:hover { background: var(--bg-card-hover); }
+
+  .pipeline-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    width: 20px;
+    flex-shrink: 0;
+  }
+
+  .pipeline-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    min-width: 110px;
+  }
+
+  .pipeline-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .pipeline-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  .tag-agente { background: rgba(129,140,248,0.15); color: var(--accent-1); }
+  .tag-cowork { background: rgba(34,211,238,0.15); color: var(--accent-3); }
+  .tag-automazione { background: rgba(245,158,11,0.15); color: var(--accent-4); }
+  .tag-umano { background: rgba(161,161,170,0.15); color: var(--text-muted); }
+
+  /* ===== SCORING ===== */
+  .scoring-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin: 2.5rem 0;
+  }
+
+  .scoring-title {
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .scoring-sub {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+  }
+
+  .scoring-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .scoring-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 1rem;
+  }
+
+  .scoring-item .s-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .scoring-item .s-weight {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-3);
+    font-weight: 700;
+  }
+
+  .scoring-bar {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(34,211,238,0.06);
+    border: 1px solid rgba(34,211,238,0.15);
+    border-radius: var(--radius-sm);
+  }
+
+  .scoring-bar .s-threshold {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--accent-3);
+    flex-shrink: 0;
+  }
+
+  .scoring-bar .s-explain {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ===== STACK ===== */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .stack-item {
+    background: var(--bg-card);
+    padding: 1rem 1.2rem;
+    text-align: center;
+  }
+
+  .stack-item .s-tool {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .stack-item .s-role {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 640px) {
+    .scoring-grid { grid-template-columns: 1fr; }
+    .stack-grid { grid-template-columns: repeat(2, 1fr); }
+    .scoring-bar { flex-direction: column; text-align: center; }
+  }
+
+  /* ===== VERSUS ===== */
+  .versus {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .versus-col {
+    background: var(--bg-card);
+    padding: 2rem;
+  }
+
+  .versus-header {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .versus-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+  }
+
+  .versus-row .label { color: var(--text-dim); }
+  .versus-row .value { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+
+  /* ===== PILLARS ===== */
+  .pillars {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .pillar {
+    background: var(--bg-card);
+    padding: 2rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    transition: background 0.3s ease;
+  }
+
+  .pillar:hover { background: var(--bg-card-hover); }
+
+  .pillar-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+
+  .pillar-icon.blue { background: rgba(129,140,248,0.15); }
+  .pillar-icon.green { background: rgba(34,211,238,0.15); }
+  .pillar-icon.purple { background: rgba(192,132,252,0.15); }
+
+  .pillar-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .pillar-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ===== STEPS ===== */
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.5rem 0;
+  }
+
+  .step {
+    background: var(--bg-card);
+    padding: 2rem;
+    transition: background 0.3s ease;
+  }
+
+  .step:hover { background: var(--bg-card-hover); }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-dim);
+    opacity: 0.3;
+    margin-bottom: 0.75rem;
+  }
+
+  .step-text {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  /* ===== Q&A ===== */
+  .qa-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .qa-q {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .qa-q::before {
+    content: 'Q';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    background: var(--gradient-1);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .qa-a {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding-left: 2.4rem;
+    line-height: 1.5;
+  }
+
+  /* ===== INSIGHT STRIP ===== */
+  .insight {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 1.2rem 1.5rem;
+    margin: 2rem 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* ===== CTA ===== */
+  .cta-section {
+    text-align: center;
+    padding: 6rem 1.5rem 4rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .cta-title {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+
+  .cta-desc {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .cta-problems {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 480px;
+    margin: 2rem auto 2.5rem;
+    text-align: left;
+  }
+
+  .cta-problem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+
+  .cta-problem:hover {
+    border-color: rgba(129,140,248,0.3);
+    background: rgba(129,140,248,0.05);
+  }
+
+  .cta-problem-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .cta-bridge {
+    font-size: 1.05rem;
+    color: var(--text-body);
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+  }
+
+  .cta-bridge strong {
+    color: #fff;
+  }
+
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #25D366;
+    color: white;
+    padding: 16px 36px;
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 20px rgba(37,211,102,0.25);
+  }
+
+  .cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(37,211,102,0.35);
+  }
+
+  .cta-button svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+  }
+
+  .cta-spots {
+    margin-top: 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border-top: 1px solid var(--border);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .footer-name {
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .footer-links {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .footer-links a {
+    color: var(--accent-1);
+    text-decoration: none;
+  }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 640px) {
+    .bento-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr; }
+    .versus { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .pipeline-step { flex-wrap: wrap; gap: 0.5rem; }
+    .pipeline-desc { min-width: 100%; order: 4; }
+    .slug-chain { gap: 0.3rem; }
+    .slug-chain .arrow { display: none; }
+    .section { padding: 4rem 1.25rem; }
+  }
+
+  /* ===== DEAN INTRO ===== */
+  .dean-intro {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .dean-intro.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .dean-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-1);
+    box-shadow: 0 0 40px rgba(129,140,248,0.2);
+    flex-shrink: 0;
+  }
+
+  .dean-text {
+    flex: 1;
+  }
+
+  .dean-name {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dean-name .agent-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    background: rgba(129,140,248,0.15);
+    color: var(--accent-1);
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .dean-role {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 0.75rem;
+  }
+
+  .dean-message {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .dean-intro {
+      flex-direction: column;
+      text-align: center;
+    }
+    .dean-avatar { width: 100px; height: 100px; }
+  }
+
+  /* ===== BLOCK VISIBILITY (for live updates) ===== */
+  .block[data-visible="false"] {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER ===== -->
+<div class="cover block" data-block="cover" data-visible="true">
+  <div class="cover-content">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live
+    </div>
+    <h1 class="cover-title">Diventa<br>Incredibile!</h1>
+    <p class="cover-sub">Workshop AI per imprenditori e manager che vogliono risultati</p>
+    <p class="cover-meta">15 aprile 2026 · Toolbox Coworking, Torino · Alessandro Nasi</p>
+  </div>
+  <div class="scroll-hint">
+    <span>Scorri</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+  </div>
+</div>
+
+<!-- ===== DEAN INTRO ===== -->
+<div class="section-divider"></div>
+<div class="dean-intro block" data-block="dean" data-visible="false">
+  <img class="dean-avatar" src="dean-avatar.png" alt="Dean — AGT-001">
+  <div class="dean-text">
+    <div class="dean-name">Dean <span class="agent-badge">AGT-001</span></div>
+    <div class="dean-role">Agente AI · Formazione & Workshop</div>
+    <div class="dean-message">Ciao! Sono Dean, l'agente AI di Alessandro dedicato alla formazione. Stasera mi occuperò di costruire questa pagina per voi — ogni volta che chiudiamo un argomento, un nuovo capitolo comparirà qui. Voi ascoltate, io scrivo. Alla fine della serata avrete tutto.</div>
+  </div>
+</div>
+
+<!-- ===== CHAPTER 01: 4 LIVELLI ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="ch01" data-visible="false">
+  <div class="chapter-label">Capitolo 01</div>
+  <h2 class="section-title">Non tutta l'AI<br>è <span class="gradient-text">uguale</span></h2>
+  <p class="section-intro">Quattro livelli. Quattro modi diversi di lavorare con l'intelligenza artificiale.</p>
+
+  <div class="level-cards">
+
+    <!-- CHAT -->
+    <div class="level-card" onclick="this.classList.toggle('open')">
+      <div class="level-card-header">
+        <div class="level-card-icon lv-chat">💬</div>
+        <div class="level-card-info">
+          <div class="level-card-num">Livello 01</div>
+          <div class="level-card-name">Chat</div>
+          <div class="level-card-hook">Tu pensi, l'AI risponde</div>
+        </div>
+        <div class="level-card-toggle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+      <div class="level-card-body">
+        <div class="level-card-content">
+          Quello che tutti conoscono: ChatGPT, Claude, Gemini. Scrivi un prompt, ricevi una risposta. Il concetto chiave è il <strong>prompt</strong> — saper chiedere bene è ancora la skill fondamentale. L'AI è reattiva: propone, consiglia, analizza — ma <strong>non fa</strong>. Non tocca i tuoi file, non esegue azioni. La memoria tra sessioni esiste, ma è automatica e passiva — accumula senza struttura. Non stai costruendo nulla: stai consultando.
+          <br><span class="key-concept kc-chat">Concetto chiave → Prompt</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COWORK -->
+    <div class="level-card" onclick="this.classList.toggle('open')">
+      <div class="level-card-header">
+        <div class="level-card-icon lv-cowork">🖥️</div>
+        <div class="level-card-info">
+          <div class="level-card-num">Livello 02</div>
+          <div class="level-card-name">Cowork</div>
+          <div class="level-card-hook">Tu definisci, l'AI esegue</div>
+        </div>
+        <div class="level-card-toggle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+      <div class="level-card-body">
+        <div class="level-card-content">
+          Qui cambia il paradigma. Cowork non è chat con memoria: è <strong>esecuzione agentica senza barriera tecnica</strong>. Il flusso è continuo — l'AI ha accesso ai tuoi file, conosce il progetto, opera con istruzioni permanenti. Ma soprattutto: può completare task complessi in autonomia mentre tu fai altro, coordinando sotto-agenti in parallelo. Le <strong>skills</strong> sono protocolli operativi — non chiedi "come si fa X", definisci come X deve essere fatto sempre. Usarlo come una chat avanzata è sprecare l'80% del suo potenziale.
+          <br><span class="key-concept kc-cowork">Concetto chiave → Skills &amp; Esecuzione autonoma</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENTI -->
+    <div class="level-card" onclick="this.classList.toggle('open')">
+      <div class="level-card-header">
+        <div class="level-card-icon lv-agenti">🤖</div>
+        <div class="level-card-info">
+          <div class="level-card-num">Livello 03</div>
+          <div class="level-card-name">Agenti</div>
+          <div class="level-card-hook">Tu obiettivi, l'AI decide</div>
+        </div>
+        <div class="level-card-toggle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+      <div class="level-card-body">
+        <div class="level-card-content">
+          Un agente non è un Cowork lasciato girare da solo. È un sistema con un <strong>loop proprio</strong>: percepisce il contesto, ragiona sugli obiettivi, agisce, valuta i risultati, aggiorna la sua conoscenza. Ha nome, ruolo e vincoli — ma soprattutto ha <strong>memoria che si costruisce nel tempo</strong>: ogni sessione lascia traccia, ogni decisione informa la prossima. La differenza col Cowork non è solo "chi guida": è che l'agente ha un obiettivo proprio e trova la strada da solo. I vincoli e i permessi sono parte dell'architettura, non optional.
+          <br><span class="key-concept kc-agenti">Concetto chiave → Loop autonomo &amp; Memoria evolutiva</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTOMAZIONE + AI -->
+    <div class="level-card" onclick="this.classList.toggle('open')">
+      <div class="level-card-header">
+        <div class="level-card-icon lv-auto">⚡</div>
+        <div class="level-card-info">
+          <div class="level-card-num">Livello 04</div>
+          <div class="level-card-name">Automazione + AI</div>
+          <div class="level-card-hook">Tu progetti, il sistema opera</div>
+        </div>
+        <div class="level-card-toggle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+      <div class="level-card-body">
+        <div class="level-card-content">
+          Zapier, Make, Relay.app, N8N. La logica di base non cambia: trigger → decisione → azione. La novità vera non è mettere l'AI in un nodo — è che grazie a protocolli come <strong>MCP</strong>, l'AI in quel nodo ha accesso nativo a decine di sistemi senza integrazioni custom. Il flusso resta strutturato, l'intelligenza è dinamica. <strong>Human-in-the-loop</strong> non significa "approvare tutto" — significa progettare quali biforcazioni richiedono un giudizio umano e quali no. Il flusso ben costruito sa quando fermarsi.
+          <br><span class="key-concept kc-auto">Concetto chiave → MCP &amp; Human-in-the-loop</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="quote-block">
+    <div class="quote-text">Quattro paradigmi di delega crescente.<br>La skill che cambia a ogni livello non è tecnica:<br>è la capacità di <strong>cedere controllo</strong> in modo consapevole.</div>
+  </div>
+
+  <div class="insight">
+    <strong>Relay.app</strong> — automazione con mini-agenti AI e human-in-the-loop. <strong>Claude Managed Agents</strong> (8 aprile 2026) — agenti autonomi che girano nel cloud per ore. Due livelli diversi, servono entrambi.
+  </div>
+
+
+</div>
+
+<!-- ===== CHAPTER 02: BELLO E MEGLIO ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="ch02" data-visible="false">
+  <div class="chapter-label">Capitolo 02</div>
+  <h2 class="section-title">Una fabbrica di siti web.<br><span class="gradient-text-2">~20 ore. €0.</span></h2>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-number gradient-text-2">2.5h</div>
+      <div class="stat-label">Da lista URL a email al cliente<br>10 siti · ~1 ora umana</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number gradient-text">1:56</div>
+      <div class="stat-label">Rapporto ore umane<br>20h vs 1.132h startup studio</div>
+    </div>
+  </div>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="pipeline-num">01</div>
+      <div class="pipeline-name">Scout & Score</div>
+      <div class="pipeline-desc">Claude naviga i siti, valuta 1-10</div>
+      <div class="pipeline-tag tag-agente">Agente</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-num">02</div>
+      <div class="pipeline-name">Build</div>
+      <div class="pipeline-desc">Lovable genera, Claude orchestra il batch</div>
+      <div class="pipeline-tag tag-cowork">Cowork</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-num">03</div>
+      <div class="pipeline-name">QA</div>
+      <div class="pipeline-desc">Controllo qualità contenuti e layout</div>
+      <div class="pipeline-tag tag-agente">Agente</div>
+      <div class="pipeline-tag tag-umano">+ Umano</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-num">04</div>
+      <div class="pipeline-name">Deploy</div>
+      <div class="pipeline-desc">Relay → API → Vercel, wildcard DNS</div>
+      <div class="pipeline-tag tag-automazione">Automazione</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-num">05</div>
+      <div class="pipeline-name">Outreach</div>
+      <div class="pipeline-desc">Instantly.ai — sequenza 3 email automatica</div>
+      <div class="pipeline-tag tag-automazione">Automazione</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="pipeline-num">06</div>
+      <div class="pipeline-name">Close</div>
+      <div class="pipeline-desc">Stripe checkout · €100 + €9/mese</div>
+      <div class="pipeline-tag tag-automazione">Automazione</div>
+    </div>
+  </div>
+
+  <!-- SCORING ALGORITHM -->
+  <div class="scoring-block">
+    <div class="scoring-title">Algoritmo di Scoring</div>
+    <div class="scoring-sub">Claude analizza ogni sito su 8 criteri pesati. Solo i peggiori entrano in pipeline.</div>
+    <div class="scoring-grid">
+      <div class="scoring-item"><span class="s-name">Layout</span><span class="s-weight">20%</span></div>
+      <div class="scoring-item"><span class="s-name">Tipografia</span><span class="s-weight">15%</span></div>
+      <div class="scoring-item"><span class="s-name">Colori</span><span class="s-weight">15%</span></div>
+      <div class="scoring-item"><span class="s-name">Mobile</span><span class="s-weight">15%</span></div>
+      <div class="scoring-item"><span class="s-name">Modernità</span><span class="s-weight">10%</span></div>
+      <div class="scoring-item"><span class="s-name">Immagini</span><span class="s-weight">10%</span></div>
+      <div class="scoring-item"><span class="s-name">Whitespace</span><span class="s-weight">10%</span></div>
+      <div class="scoring-item"><span class="s-name">Navigazione</span><span class="s-weight">5%</span></div>
+    </div>
+    <div class="scoring-bar">
+      <div class="s-threshold">≤ 4</div>
+      <div class="s-explain">Solo i siti con score 4 o meno entrano in pipeline. Filtra ~70% dei siti — l'effort si concentra dove il problema è più evidente.</div>
+    </div>
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="stack-grid">
+    <div class="stack-item"><div class="s-tool">Claude AI</div><div class="s-role">Scoring, prompt, strategia</div></div>
+    <div class="stack-item"><div class="s-tool">Lovable</div><div class="s-role">Generazione siti</div></div>
+    <div class="stack-item"><div class="s-tool">Notion</div><div class="s-role">DB operativo pipeline</div></div>
+    <div class="stack-item"><div class="s-tool">Stripe</div><div class="s-role">Pagamenti + subscription</div></div>
+    <div class="stack-item"><div class="s-tool">Instantly.ai</div><div class="s-role">Email outreach</div></div>
+    <div class="stack-item"><div class="s-tool">Relay.app</div><div class="s-role">Orchestrazione workflow</div></div>
+    <div class="stack-item"><div class="s-tool">Vercel</div><div class="s-role">Deploy + wildcard DNS</div></div>
+    <div class="stack-item"><div class="s-tool">GitHub</div><div class="s-role">Repo sync (fox-0101)</div></div>
+    <div class="stack-item"><div class="s-tool">Render</div><div class="s-role">API pubblica deploy</div></div>
+  </div>
+
+  <!-- CONFRONTO -->
+  <div class="versus">
+    <div class="versus-col">
+      <div class="versus-header" style="color: var(--accent-3);">belloemeglio.it</div>
+      <div class="versus-row"><span class="label">Persone</span><span class="value">1</span></div>
+      <div class="versus-row"><span class="label">Ore umane</span><span class="value">~20h</span></div>
+      <div class="versus-row"><span class="label">Tempo</span><span class="value">20 giorni</span></div>
+      <div class="versus-row"><span class="label">Costo team</span><span class="value">€0</span></div>
+      <div class="versus-row"><span class="label">Infrastruttura</span><span class="value">€0 free tier</span></div>
+    </div>
+    <div class="versus-col">
+      <div class="versus-header" style="color: var(--text-dim);">Startup studio tradizionale</div>
+      <div class="versus-row"><span class="label">Persone</span><span class="value">5-6</span></div>
+      <div class="versus-row"><span class="label">Ore umane</span><span class="value">~1.132h</span></div>
+      <div class="versus-row"><span class="label">Tempo</span><span class="value">60-90 giorni</span></div>
+      <div class="versus-row"><span class="label">Costo team</span><span class="value">€45-65k</span></div>
+      <div class="versus-row"><span class="label">Infrastruttura</span><span class="value">~€600</span></div>
+    </div>
+  </div>
+
+  <!-- LA VERITÀ -->
+  <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 2.5rem 0;">
+    <div style="padding: 2rem 2rem 1.5rem;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: #ef4444; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.5rem;">La verità</div>
+      <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem;">Il feedback negativo è il dato più prezioso.</div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 1.5rem;">
+        <div style="background: var(--bg); padding: 1.2rem; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 900; color: #ef4444;">0</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">vendite</div>
+        </div>
+        <div style="background: var(--bg); padding: 1.2rem; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--accent-4);">4</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">feedback</div>
+        </div>
+        <div style="background: var(--bg); padding: 1.2rem; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--accent-3);">1</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">canale attivo</div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.7;">Il business vero è fatto di iterazione — e quando hai un sistema di agenti che lavora per te, puoi iterare in ore, non in settimane.</div>
+    </div>
+
+    <!-- ITERAZIONE: MVP 2 -->
+    <div style="border-top: 1px solid var(--border); padding: 1.5rem 2rem;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--accent-3); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.75rem;">Iterazione in corso → MVP 2</div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+          <span style="color: var(--accent-3); flex-shrink: 0;">→</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;"><strong style="color: var(--text);">Canale Orangogo</strong> — 11.000 associazioni sportive. Non più cold outreach: un partner con audience.</span>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+          <span style="color: var(--accent-3); flex-shrink: 0;">→</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;"><strong style="color: var(--text);">ADV su Meta</strong> — "Ti rifai il sito?" → lo faccio solo se sei interessato. Sparo in quantità. Configurazione Meta fatta interamente da Vince, il mio agente marketing.</span>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+          <span style="color: var(--accent-3); flex-shrink: 0;">→</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;"><strong style="color: var(--text);">Modifica sito via WhatsApp</strong> — il cliente manda un vocale, il sito si aggiorna. Zero barriera tecnica.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Q&A ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="qa" data-visible="false">
+  <div class="chapter-label">Dal pubblico</div>
+  <h2 class="section-title">Le vostre <span class="gradient-text">domande</span></h2>
+
+  <div class="qa-block">
+    <div class="qa-q">Le domande dal pubblico appariranno qui in tempo reale.</div>
+    <div class="qa-a">Ogni domanda riceverà una risposta durante il workshop.</div>
+  </div>
+</div>
+
+<!-- ===== CHAPTER 03: SISTEMI ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="ch03" data-visible="false">
+  <div class="chapter-label">Capitolo 03</div>
+  <h2 class="section-title">Non servono prompt migliori.<br>Servono <span class="gradient-text">sistemi.</span></h2>
+  <p class="section-intro">Un agente non è un prompt. È un'identità che si orienta all'interno di un contesto.</p>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="pillar-icon blue">🧭</div>
+      <div>
+        <div class="pillar-name">Contesto</div>
+        <div class="pillar-desc">L'agente conosce il tuo business, i tuoi clienti, i tuoi vincoli. Non parte mai da zero.</div>
+      </div>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon green">💾</div>
+      <div>
+        <div class="pillar-name">Persistenza</div>
+        <div class="pillar-desc">Dopo ogni sessione, ricorda. Le decisioni, gli errori, cosa ha funzionato. La conoscenza non si perde.</div>
+      </div>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon purple">🧬</div>
+      <div>
+        <div class="pillar-name">Evoluzione</div>
+        <div class="pillar-desc">Il prompt cambia, la knowledge base cresce, i vincoli si aggiornano. L'agente di oggi è diverso da quello di ieri.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote-block" style="border-color: var(--accent-2);">
+    <div class="quote-text">Un prompt è un'istruzione.<br>Un agente è un'identità che si orienta all'interno di un contesto.</div>
+    <div class="quote-attr">— Alessandro Nasi, durante il workshop</div>
+  </div>
+</div>
+
+<!-- ===== AGENT OS ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="agentos" data-visible="false">
+  <div class="chapter-label">Il mio sistema</div>
+  <h2 class="section-title">Agent <span class="gradient-text">OS</span></h2>
+  <p class="section-intro">Un sistema operativo per agenti AI. Ogni agente è un'entità completa — non un prompt salvato, ma un collaboratore digitale con architettura propria.</p>
+
+  <div class="agentos-block" style="margin-top: 0;">
+
+    <div class="aos-architecture" style="padding-top: 1.5rem;">
+
+      <!-- IL CICLO: INVOKE → CHAT → WRITEBACK → EVOLVE -->
+      <div class="aos-cycle">
+        <div class="aos-cycle-step">
+          <div class="aos-cycle-num">01</div>
+          <div class="aos-cycle-name c-invoke">Invoke</div>
+          <div class="aos-cycle-desc">Attiva l'agente</div>
+        </div>
+        <div class="aos-arrow">→</div>
+        <div class="aos-cycle-step">
+          <div class="aos-cycle-num">02</div>
+          <div class="aos-cycle-name c-chat">Chat</div>
+          <div class="aos-cycle-desc">Lavora con te</div>
+        </div>
+        <div class="aos-arrow">→</div>
+        <div class="aos-cycle-step">
+          <div class="aos-cycle-num">03</div>
+          <div class="aos-cycle-name c-write">Writeback</div>
+          <div class="aos-cycle-desc">Salva ciò che ha imparato</div>
+        </div>
+        <div class="aos-arrow">→</div>
+        <div class="aos-cycle-step">
+          <div class="aos-cycle-num">04</div>
+          <div class="aos-cycle-name c-evolve">Evolve</div>
+          <div class="aos-cycle-desc">Aggiorna sé stesso</div>
+        </div>
+      </div>
+
+      <!-- ANATOMIA DI UN AGENTE -->
+      <div class="aos-anatomy-label">Anatomia di un agente</div>
+      <div class="aos-anatomy">
+        <div class="aos-layer">
+          <div class="aos-layer-bar bar-purple"></div>
+          <div class="aos-layer-name">Identità</div>
+          <div class="aos-layer-detail">Nome, ruolo, tono, vincoli. Non è un'istruzione — è una persona.</div>
+        </div>
+        <div class="aos-layer">
+          <div class="aos-layer-bar bar-cyan"></div>
+          <div class="aos-layer-name">Contesto</div>
+          <div class="aos-layer-detail">Business, clienti, progetti, numeri. Conosce tutto dal giorno uno.</div>
+        </div>
+        <div class="aos-layer">
+          <div class="aos-layer-bar bar-indigo"></div>
+          <div class="aos-layer-name">Persistenza</div>
+          <div class="aos-layer-detail">Session log, decisioni, errori. Ogni sessione lascia traccia.</div>
+        </div>
+        <div class="aos-layer">
+          <div class="aos-layer-bar bar-amber"></div>
+          <div class="aos-layer-name">Evoluzione</div>
+          <div class="aos-layer-detail">Il prompt cambia, la knowledge cresce. V1 → V2 → V3.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SKILLS -->
+    <div style="padding: 0 2rem 1.5rem;">
+      <div class="aos-anatomy-label">Il superpower nascosto</div>
+      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.5rem 1.5rem;">
+        <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 0.5rem;">Skills</div>
+        <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1rem;">
+          Una skill non è un task che l'agente fa <strong style="color: var(--text)">per te</strong>. È un'attività che l'agente fa <strong style="color: var(--text)">per sé stesso</strong> — per diventare più bravo. La skill migliora la qualità dell'agente, non le informazioni che ti dà.
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.2rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+          <div style="font-size: 1.3rem; flex-shrink: 0; margin-top: 2px;">📡</div>
+          <div>
+            <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem;">Esempio concreto</div>
+            <div style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.6;">
+              <strong style="color: var(--accent-3);">Doc</strong> monitora costantemente le news sull'evoluzione dei sistemi AI. Non per darmi un report — per aggiornare la propria knowledge base. Quando poi lo uso, lui sa già tutto. Non devo chiedergli di informarsi: <strong style="color: var(--text-muted);">si è già informato da solo.</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLI AGENTI -->
+    <img class="agentos-img" src="agents.png" alt="Agent OS — Gli 8 agenti di Alessandro Nasi">
+    <div class="agentos-footer">
+      <span class="agent-chip">Dean · Formazione</span>
+      <span class="agent-chip">Lora · Prodotto</span>
+      <span class="agent-chip">Vince · Marketing</span>
+      <span class="agent-chip">Iron · Operations</span>
+      <span class="agent-chip">Spacey · Acceleratore</span>
+      <span class="agent-chip">Set · Strategia</span>
+      <span class="agent-chip">Focus · Time</span>
+      <span class="agent-chip">Doc · AI Architecture</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHAPTER 04: PATTERN ===== -->
+<div class="section-divider"></div>
+<div class="section block" data-block="ch04" data-visible="false">
+  <div class="chapter-label">Capitolo 04</div>
+  <h2 class="section-title">E nel <span class="gradient-text-3">tuo</span> business?</h2>
+  <p class="section-intro">Il pattern è sempre lo stesso, non importa il settore.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-text">Trova il processo che ti ruba tempo</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-text">Scomponilo in step</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-text">Per ogni step: serve giudizio umano?</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-text">Scegli il livello giusto di AI</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CTA ===== -->
+<div class="section-divider"></div>
+<div class="cta-section block" data-block="cta" data-visible="false">
+  <h2 class="cta-title">Vuoi applicare tutto questo al <span class="gradient-text">tuo business?</span></h2>
+
+  <p class="cta-desc">Seleziono fino a <strong>5 problemi reali</strong> da migliorare.</p>
+
+  <div class="cta-problems">
+    <div class="cta-problem">
+      <span class="cta-problem-icon">⏳</span>
+      <span>Processi che rubano tempo</span>
+    </div>
+    <div class="cta-problem">
+      <span class="cta-problem-icon">🎯</span>
+      <span>Decisioni prese senza dati</span>
+    </div>
+    <div class="cta-problem">
+      <span class="cta-problem-icon">🔑</span>
+      <span>Operazioni che dipendono da singole persone</span>
+    </div>
+    <div class="cta-problem">
+      <span class="cta-problem-icon">🏚️</span>
+      <span>Sistemi legacy che frenano la crescita</span>
+    </div>
+  </div>
+
+  <p class="cta-bridge">Se ti sei riconosciuto in qualcosa — <strong>parliamone.</strong><br>Se hai un progetto ambizioso, contattami:<br>lo possiamo implementare in un <strong>modo tutto nuovo.</strong></p>
+
+  <a href="https://wa.me/393664905548?text=Ciao%20Alessandro%2C%20ero%20al%20workshop.%20Vorrei%20parlarti%20di%20un%20caso%20interessante." class="cta-button" target="_blank">
+    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    Parlami del tuo caso
+  </a>
+  <div class="cta-spots">Posso selezionare fino a 5 casi. Raccontami il tuo.</div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  <div class="footer-name">Alessandro Nasi</div>
+  <div class="footer-links">
+    <a href="mailto:alessandro@djungle.io">alessandro@djungle.io</a> ·
+    <a href="https://www.linkedin.com/in/nasialessandro/" target="_blank">LinkedIn</a>
+  </div>
+</div>
+
+<!-- ===== TOAST NOTIFICATION ===== -->
+<div class="new-chapter-toast" id="toast">Nuovo capitolo disponibile ↓</div>
+
+<!-- ===== POLLING + SCROLL REVEAL ===== -->
+<script>
+(function() {
+  // === CONFIG ===
+  const POLL_INTERVAL = 8000; // 8 secondi
+  const API_URL = '/api/blocks';
+
+  // === SCROLL REVEAL ===
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.section, .cta-section, .dean-intro').forEach(el => observer.observe(el));
+
+  // === TOAST ===
+  const toast = document.getElementById('toast');
+  function showToast(text) {
+    toast.textContent = text || 'Nuovo capitolo disponibile ↓';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+
+  // === BLOCK VISIBILITY ===
+  // Mappa dei divider: ogni blocco ha un divider prima di sé
+  function updateBlockVisibility(blocks) {
+    let newBlocks = [];
+
+    document.querySelectorAll('.block[data-block]').forEach(el => {
+      const slug = el.dataset.block;
+      if (!(slug in blocks)) return;
+
+      const shouldShow = blocks[slug];
+      const currentlyVisible = el.dataset.visible === 'true';
+
+      if (shouldShow && !currentlyVisible) {
+        // Nuovo blocco! Mostralo con animazione
+        el.dataset.visible = 'true';
+        el.classList.add('block-reveal');
+
+        // Mostra anche il divider precedente
+        const prev = el.previousElementSibling;
+        if (prev && prev.classList.contains('section-divider')) {
+          prev.style.display = '';
+        }
+
+        // Osserva per scroll-reveal
+        observer.observe(el);
+
+        newBlocks.push(slug);
+      } else if (!shouldShow && currentlyVisible && slug !== 'cover') {
+        // Nascondi (raro, ma supportato)
+        el.dataset.visible = 'false';
+        el.classList.remove('block-reveal', 'visible');
+      }
+    });
+
+    if (newBlocks.length > 0) {
+      // Toast notification
+      showToast();
+
+      // Scroll dolce al primo nuovo blocco dopo un breve delay
+      setTimeout(() => {
+        const firstNew = document.querySelector(`.block[data-block="${newBlocks[0]}"]`);
+        if (firstNew) {
+          firstNew.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 600);
+    }
+  }
+
+  // === POLLING ===
+  let pollErrors = 0;
+
+  async function pollBlocks() {
+    try {
+      const res = await fetch(API_URL + '?t=' + Date.now());
+      if (!res.ok) throw new Error(res.status);
+
+      const data = await res.json();
+      if (data.blocks) {
+        updateBlockVisibility(data.blocks);
+      }
+      pollErrors = 0;
+    } catch (e) {
+      pollErrors++;
+      // Dopo 5 errori consecutivi, rallenta il polling
+      if (pollErrors > 5) {
+        console.warn('Polling rallentato per errori consecutivi');
+      }
+    }
+  }
+
+  // Prima call immediata, poi intervallo
+  pollBlocks();
+  setInterval(pollBlocks, pollErrors > 5 ? POLL_INTERVAL * 3 : POLL_INTERVAL);
+
+  // === FALLBACK: se il polling non funziona, mostra tutto dopo 2 minuti ===
+  // (safety net per il workshop)
+  setTimeout(() => {
+    const hiddenBlocks = document.querySelectorAll('.block[data-visible="false"]');
+    if (hiddenBlocks.length > 6 && pollErrors > 3) {
+      console.warn('Fallback: polling non funzionante, mostro tutti i blocchi');
+      document.querySelectorAll('.block[data-block]').forEach(el => {
+        el.dataset.visible = 'true';
+      });
+      document.querySelectorAll('.section-divider').forEach(el => {
+        el.style.display = '';
+      });
+    }
+  }, 120000);
+})();
+</script>
+
+</body>
+</html>

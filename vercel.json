@@ -1,14 +1,4 @@
 {
   "version": 2,
-  "name": "workshop-live-notes",
-  "routes": [
-    {
-      "src": "/api/blocks",
-      "dest": "/api/blocks.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ]
+  "name": "workshop-live-notes"
 }
